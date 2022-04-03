@@ -7,5 +7,8 @@ void setup() {
 }
 
 void loop() {
-    // TODO
+    if (is_b1_pushed() || is_b2_pushed()) {
+        ir_loop();
+        Serial.println("Button push recorded");
+    }
 }

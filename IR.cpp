@@ -16,10 +16,11 @@ void ir_setup()
 }
 
 void send_ir_data() {
-    uint16_t sAddress = 0x0102;
-    uint8_t sCommand = 0x34;
-    uint8_t sRepeats = 1;
-    IrSender.sendNEC(sAddress, sCommand, sRepeats);
+    uint16_t address = 0x0528;
+    uint8_t command = 0xBD;
+    uint_fast8_t numberOfRepeats = 0;
+    uint16_t vendorCode = 0x4004;
+    IrSender.sendKaseikyo(address, command, numberOfRepeats, vendorCode);
 }
 
 void receive_ir_data() {
@@ -27,7 +28,7 @@ void receive_ir_data() {
         IRData data = IrReceiver.decodedIRData;
         Serial.print(F("Decoded protocol: "));
         Serial.print(getProtocolString(data.protocol));
-        Serial.print(F("Decoded raw data: "));
+        Serial.print(F(", decoded raw data: "));
         Serial.print(data.decodedRawData, HEX);
         Serial.print(F(", decoded address: "));
         Serial.print(data.address, HEX);
