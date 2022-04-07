@@ -1,49 +1,57 @@
 #include <Arduino.h>
-#include <IRremote.hpp>
 
-#define DECODE_NEC
-#define DECODE_DISTANCE
+#define IRMP_INPUT_PIN 2
+#define IRSND_OUTPUT_PIN 3
+#define IRSND_IR_FREQUENCY 38000
+#define IRSND_PROTOCOL_NAMES 1
+#define IRSND_SUPPORT_KASEIKYO_PROTOCOL 1
 
-#define IR_RECEIVE_PIN 2
-#define IR_SEND_PIN 3
+#include <irsnd.hpp>
 
-void ir_setup()
-{
-    Serial.begin(115200);
-    delay(4000);
-    IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);
-    IrSender.begin(IR_SEND_PIN);
+uint8_t power_on[6] = {0x40, 0x04, 0x05, 0x28, 0x3D, 0x10};
+uint8_t power_off[6] = {0x40, 0x04, 0x05, 0x28, 0xBD, 0x90};
+uint8_t sel_plus[6] = {0x40, 0x04, 0x06, 0x02, 0x98, 0x9C};
+uint8_t sel_minus[6] = {0x40, 0x04, 0x06, 0x02, 0x18, 0x1C};
+uint8_t vol_plus[6] = {0x40, 0x04, 0x06, 0x02, 0x88, 0x8C};
+uint8_t vol_minus[6] = {0x40, 0x04, 0x06, 0x02, 0x08, 0x0C};
+uint8_t power[6] = {0x40, 0x04, 0x06, 0x02, 0x00, 0x04};
+
+String all_command_names [] = {"power_on", "power_off", "sel_plus", "sel_minus", "vol_plus", "vol_minus", "power"};
+uint8_t * all_commands [] = {power_on, power_off, sel_plus, sel_minus, vol_plus, vol_minus, power};
+short current_command_idx = 0;
+
+void ir_setup() {
+    irsnd_init();
 }
 
-void send_ir_data() {
-    uint16_t address = 0x0528;
-    uint8_t command = 0xBD;
-    uint_fast8_t numberOfRepeats = 0;
-    uint16_t vendorCode = 0x4004;
-    IrSender.sendKaseikyo(address, command, numberOfRepeats, vendorCode);
+void ir_send() {
+    uint8_t repeat = 0x0;
+    irsnd_send_raw_kaseikyo_data(all_commands[current_command_idx], repeat);
 }
 
-void receive_ir_data() {
-    if (IrReceiver.decode()) {
-        IRData data = IrReceiver.decodedIRData;
-        Serial.print(F("Decoded protocol: "));
-        Serial.print(getProtocolString(data.protocol));
-        Serial.print(F(", decoded raw data: "));
-        Serial.print(data.decodedRawData, HEX);
-        Serial.print(F(", decoded address: "));
-        Serial.print(data.address, HEX);
-        Serial.print(F(", decoded command: "));
-        Serial.println(data.command, HEX);
-        IrReceiver.resume();
-    }
+void ir_command_toggle() {
+    current_command_idx = (current_command_idx + 1) % (sizeof(all_commands) / sizeof(all_commands[0]));
+    Serial.println("New command:" + all_command_names[current_command_idx]);
+    delay(300);
 }
 
-void ir_loop() {
-    send_ir_data();
+// This is the code I hacked into "irsnd.hpp", from the IRMP library
+// void irsnd_send_raw_kaseikyo_data (uint8_t * data, uint8_t repeat)
+// {
+//     while (irsnd_busy) {} // Wait for last command to have ended
+//     irsnd_protocol = IRMP_KASEIKYO_PROTOCOL;
+//     irsnd_repeat = repeat;
+//     irsnd_suppress_trailer = FALSE;
 
-    // wait for the receiver state machine to detect the end of a protocol
-    delay((RECORD_GAP_MICROS / 1000) + 5);
-    receive_ir_data();
+//     irsnd_buffer[0] = data[0];
+//     irsnd_buffer[1] = data[1];
+//     irsnd_buffer[2] = data[2];
+//     irsnd_buffer[3] = data[3];
+//     irsnd_buffer[4] = data[4];
+//     irsnd_buffer[5] = data[5];
+//     irsnd_busy = TRUE;
 
-    delay(100);
-}
+//     storeIRTimer(); // Store current timer state to enable alternately send and receive with the same timer
+//     initIRTimerForSend(); // Setup timer and interrupts for sending
+//     while (irsnd_busy) {} // Wait for frame and leading space to be sent
+// }

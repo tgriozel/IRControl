@@ -2,6 +2,7 @@
 #define IR_H
 
 void ir_setup();
-void ir_loop();
+void ir_send();
+void ir_command_toggle();
 
 #endif
